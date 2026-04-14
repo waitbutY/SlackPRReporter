@@ -32,7 +32,8 @@ export class StateStore {
   }
 
   getTrackedPR(channelId: string, prUrl: string): TrackedPR | undefined {
-    return this.trackedPRs.get(channelId)?.get(prUrl);
+    const pr = this.trackedPRs.get(channelId)?.get(prUrl);
+    return pr ? { ...pr } : undefined;
   }
 
   updateTrackedPR(channelId: string, prUrl: string, updates: Partial<TrackedPR>): void {

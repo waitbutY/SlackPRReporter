@@ -1,15 +1,6 @@
 import { StateStore } from '../../src/store/stateStore';
-import { TrackedPR, PRState } from '../../src/types/index';
+import { TrackedPR } from '../../src/types/index';
 import { DEFAULT_EMOJI_CONFIG, HARDCODED_BOT_BLOCKLIST } from '../../src/config/defaults';
-
-const makeState = (overrides: Partial<PRState> = {}): PRState => ({
-  merged: false,
-  closed: false,
-  approvalCount: 0,
-  reviewComments: [],
-  ciStatus: 'none',
-  ...overrides,
-});
 
 const makePR = (overrides: Partial<TrackedPR> = {}): TrackedPR => ({
   prUrl: 'https://github.com/org/repo/pull/1',
@@ -44,6 +35,12 @@ describe('StateStore', () => {
     it('allows same PR URL in different channels', () => {
       store.addTrackedPR('C001', makePR());
       expect(store.addTrackedPR('C002', makePR())).toBe(true);
+    });
+
+    it('does not double-register in the reverse index on duplicate add', () => {
+      store.addTrackedPR('C001', makePR());
+      store.addTrackedPR('C001', makePR()); // duplicate — should be ignored
+      expect(store.getChannelsForPR('org/repo', 1)).toHaveLength(1);
     });
   });
 
