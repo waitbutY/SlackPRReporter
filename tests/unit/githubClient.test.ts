@@ -23,6 +23,15 @@ describe('GitHubClient', () => {
     client = new GitHubClient('123', 'fake-private-key', 456);
   });
 
+  describe('octokit caching', () => {
+    it('only calls getInstallationOctokit once across multiple requests', async () => {
+      mockRequest.mockResolvedValue({ data: { required_pull_request_reviews: { required_approving_review_count: 1 } } });
+      await client.getRequiredApprovals('org', 'repo', 'main');
+      await client.getRequiredApprovals('org', 'repo', 'main');
+      expect(mockGetInstallationOctokit).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('getRequiredApprovals', () => {
     it('returns required_approving_review_count from branch protection', async () => {
       mockRequest.mockResolvedValueOnce({

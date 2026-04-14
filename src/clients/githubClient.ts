@@ -125,12 +125,14 @@ export class GitHubClient {
   ): CIStatus {
     if (checkRuns.length === 0) return 'none';
 
-    if (checkRuns.some(c => c.conclusion === 'failure' || c.conclusion === 'cancelled')) {
+    const failingConclusions = new Set(['failure', 'cancelled', 'action_required', 'timed_out']);
+    if (checkRuns.some(c => c.conclusion !== null && failingConclusions.has(c.conclusion))) {
       return 'failing';
     }
     if (checkRuns.some(c => c.conclusion === null && (c.status === 'in_progress' || c.status === 'queued' || c.status === 'waiting'))) {
       return 'pending';
     }
+    // GitHub terminal success conclusions — anything else with a non-null conclusion is treated as pending
     const terminal = new Set(['success', 'skipped', 'neutral']);
     if (checkRuns.every(c => terminal.has(c.conclusion ?? ''))) {
       return 'passing';
