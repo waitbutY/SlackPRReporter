@@ -18,6 +18,7 @@ export class GitHubHandler {
     if (!signature) return false;
     try {
       const digest = 'sha256=' + crypto.createHmac('sha256', this.webhookSecret).update(rawBody).digest('hex');
+      if (digest.length !== signature.length) return false;
       return crypto.timingSafeEqual(Buffer.from(digest), Buffer.from(signature));
     } catch {
       return false;
@@ -86,9 +87,14 @@ export class GitHubHandler {
       if (!tracked) continue;
 
       const blocklist = this.store.getBotBlocklist(channelId);
-      const { state: newState, baseBranch } = await this.ghClient.fetchPRState(
-        owner, repo, prNumber, blocklist,
-      );
+      let fetchResult: { state: PRState; baseBranch: string };
+      try {
+        fetchResult = await this.ghClient.fetchPRState(owner, repo, prNumber, blocklist);
+      } catch (err) {
+        console.error(`Failed to fetch PR state for ${repoFullName}#${prNumber}:`, err);
+        continue;
+      }
+      const { state: newState, baseBranch } = fetchResult;
 
       if (this.statesEqual(tracked.lastKnownState, newState) && tracked.threadReplyTs) {
         continue;
@@ -98,21 +104,22 @@ export class GitHubHandler {
       const newEmojis = this.prService.computeEmojis(newState, tracked.requiredApprovals, config);
       const { add, remove } = this.prService.diffEmojis(tracked.activeEmojis, newEmojis);
 
-      await Promise.all([
+      await Promise.allSettled([
         ...add.map(e => this.slackClient.addReaction(channelId, tracked.slackMessageTs, e)),
         ...remove.map(e => this.slackClient.removeReaction(channelId, tracked.slackMessageTs, e)),
       ]);
 
       const threadText = this.prService.formatThreadText(newState, tracked.requiredApprovals);
 
-      if (tracked.threadReplyTs) {
-        await this.slackClient.editMessage(channelId, tracked.threadReplyTs, threadText);
+      let threadReplyTs = tracked.threadReplyTs;
+      if (threadReplyTs) {
+        await this.slackClient.editMessage(channelId, threadReplyTs, threadText);
       } else {
-        const newTs = await this.slackClient.postThreadReply(channelId, tracked.slackMessageTs, threadText);
-        this.store.updateTrackedPR(channelId, prUrl, { threadReplyTs: newTs });
+        threadReplyTs = await this.slackClient.postThreadReply(channelId, tracked.slackMessageTs, threadText);
       }
 
       this.store.updateTrackedPR(channelId, prUrl, {
+        threadReplyTs,
         lastKnownState: newState,
         activeEmojis: newEmojis,
         baseBranch,

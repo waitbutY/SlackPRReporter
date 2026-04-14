@@ -83,6 +83,11 @@ describe('GitHubHandler', () => {
     it('returns false for a missing signature', () => {
       expect(handler.verifySignature('body', '')).toBe(false);
     });
+
+    it('returns false for a signature with wrong length', () => {
+      const body = JSON.stringify({ action: 'test' });
+      expect(handler.verifySignature(body, 'sha256=abc')).toBe(false);
+    });
   });
 
   describe('handleWebhook', () => {
@@ -176,6 +181,30 @@ describe('GitHubHandler', () => {
       });
 
       expect(mockPostThreadReply).toHaveBeenCalled();
+    });
+
+    it('updates on check_suite.completed', async () => {
+      await handler.handleWebhook('check_suite', {
+        action: 'completed',
+        check_suite: { pull_requests: [{ number: 1, base: { repo: { full_name: 'org/repo' } } }] },
+      });
+      expect(mockFetchPRState).toHaveBeenCalled();
+    });
+
+    it('updates on pull_request_review_comment', async () => {
+      await handler.handleWebhook('pull_request_review_comment', {
+        action: 'created',
+        pull_request: { number: 1, base: { repo: { full_name: 'org/repo' } } },
+      });
+      expect(mockFetchPRState).toHaveBeenCalled();
+    });
+
+    it('ignores pull_request with non-tracked actions (e.g. labeled)', async () => {
+      await handler.handleWebhook('pull_request', {
+        action: 'labeled',
+        pull_request: { number: 1, base: { repo: { full_name: 'org/repo' } } },
+      });
+      expect(mockFetchPRState).not.toHaveBeenCalled();
     });
 
     it('skips update when state has not changed', async () => {
