@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "slack-pr-reporter.fullname" . }}
+  labels:
+    {{- include "slack-pr-reporter.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "slack-pr-reporter.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "slack-pr-reporter.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "3000"
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "slack-pr-reporter.fullname" . }}-config
+                  key: LOG_LEVEL
+            - name: SLACK_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "slack-pr-reporter.fullname" . }}-secrets
+                  key: SLACK_BOT_TOKEN
+            - name: SLACK_SIGNING_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "slack-pr-reporter.fullname" . }}-secrets
+                  key: SLACK_SIGNING_SECRET
+            - name: GITHUB_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "slack-pr-reporter.fullname" . }}-secrets
+                  key: GITHUB_APP_ID
+            - name: GITHUB_APP_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "slack-pr-reporter.fullname" . }}-secrets
+                  key: GITHUB_APP_PRIVATE_KEY
+            - name: GITHUB_INSTALLATION_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "slack-pr-reporter.fullname" . }}-secrets
+                  key: GITHUB_INSTALLATION_ID
+            - name: GITHUB_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "slack-pr-reporter.fullname" . }}-secrets
+                  key: GITHUB_WEBHOOK_SECRET
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

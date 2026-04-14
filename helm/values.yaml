@@ -1,0 +1,45 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/your-org/slack-pr-reporter
+  pullPolicy: IfNotPresent
+  tag: ""  # Defaults to chart appVersion
+
+service:
+  type: ClusterIP
+  port: 3000
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  host: slack-pr-reporter.your-domain.com
+  tls:
+    enabled: true
+    secretName: slack-pr-reporter-tls
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+logLevel: info
+
+defaultEmoji:
+  merged: white_check_mark
+  closed: x
+  approved: heavy_check_mark
+  needsReview: eyes
+  ciPassing: green_circle
+  ciFailing: red_circle
+  ciPending: yellow_circle
+  hasOpenComments: speech_balloon
