@@ -129,6 +129,22 @@ describe('StateStore', () => {
     });
   });
 
+  describe('removeTrackedPR', () => {
+    it('removes a tracked PR from the store', () => {
+      store.addTrackedPR('C001', makePR());
+      store.removeTrackedPR('C001', 'https://github.com/org/repo/pull/1');
+      expect(store.getTrackedPR('C001', 'https://github.com/org/repo/pull/1')).toBeUndefined();
+    });
+
+    it('removes the PR from the reverse index', () => {
+      store.addTrackedPR('C001', makePR());
+      store.removeTrackedPR('C001', 'https://github.com/org/repo/pull/1');
+      // Adding same PR again should succeed (not treated as duplicate)
+      const added = store.addTrackedPR('C001', makePR());
+      expect(added).toBe(true);
+    });
+  });
+
   describe('bot blocklist', () => {
     it('always includes hardcoded bots', () => {
       const list = store.getBotBlocklist('C001');

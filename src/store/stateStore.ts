@@ -76,6 +76,28 @@ export class StateStore {
     return new Set([...HARDCODED_BOT_BLOCKLIST, ...custom]);
   }
 
+  removeTrackedPR(channelId: string, prUrl: string): void {
+    const channelPRs = this.trackedPRs.get(channelId);
+    if (!channelPRs) return;
+
+    const pr = channelPRs.get(prUrl);
+    if (!pr) return;
+
+    channelPRs.delete(prUrl);
+    if (channelPRs.size === 0) {
+      this.trackedPRs.delete(channelId);
+    }
+
+    const key = this.prKey(pr.repoFullName, pr.prNumber);
+    const channels = this.prToChannels.get(key);
+    if (channels) {
+      channels.delete(channelId);
+      if (channels.size === 0) {
+        this.prToChannels.delete(key);
+      }
+    }
+  }
+
   addToBotBlocklist(channelId: string, username: string): void {
     if (!this.customBotBlocklists.has(channelId)) {
       this.customBotBlocklists.set(channelId, new Set());

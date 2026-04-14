@@ -4,6 +4,7 @@ import { GitHubClient } from '../clients/githubClient.js';
 import { SlackClient } from '../clients/slackClient.js';
 import { ParsedPRUrl, SlashCommandResult } from '../types/index.js';
 import { VALID_EMOJI_KEYS } from '../config/defaults.js';
+import { logger } from '../logger.js';
 
 const PR_URL_REGEX = /https:\/\/github\.com\/([^/\s]+)\/([^/\s]+)\/pull\/(\d+)/g;
 
@@ -59,33 +60,38 @@ export class SlackHandler {
 
       if (!added) continue;
 
-      const blocklist = this.store.getBotBlocklist(channelId);
-      const { state, baseBranch } = await this.ghClient.fetchPRState(
-        parsed.owner, parsed.repo, parsed.prNumber, blocklist,
-      );
+      try {
+        const blocklist = this.store.getBotBlocklist(channelId);
+        const { state, baseBranch } = await this.ghClient.fetchPRState(
+          parsed.owner, parsed.repo, parsed.prNumber, blocklist,
+        );
 
-      const channelOverride = this.store.getRequiredApprovalsOverride(channelId);
-      const requiredApprovals = await this.ghClient.getRequiredApprovals(
-        parsed.owner, parsed.repo, baseBranch, channelOverride ?? 1,
-      );
+        const channelOverride = this.store.getRequiredApprovalsOverride(channelId);
+        const requiredApprovals = await this.ghClient.getRequiredApprovals(
+          parsed.owner, parsed.repo, baseBranch, channelOverride ?? 1,
+        );
 
-      this.store.updateTrackedPR(channelId, parsed.url, { baseBranch, requiredApprovals });
+        this.store.updateTrackedPR(channelId, parsed.url, { baseBranch, requiredApprovals });
 
-      const config = this.store.getEmojiConfig(channelId);
-      const emojis = this.prService.computeEmojis(state, requiredApprovals, config);
+        const config = this.store.getEmojiConfig(channelId);
+        const emojis = this.prService.computeEmojis(state, requiredApprovals, config);
 
-      await Promise.allSettled(
-        emojis.map(e => this.slackClient.addReaction(channelId, messageTs, e))
-      );
+        await Promise.allSettled(
+          emojis.map(e => this.slackClient.addReaction(channelId, messageTs, e))
+        );
 
-      const threadText = this.prService.formatThreadText(state, requiredApprovals);
-      const threadTs = await this.slackClient.postThreadReply(channelId, messageTs, threadText);
+        const threadText = this.prService.formatThreadText(state, requiredApprovals);
+        const threadTs = await this.slackClient.postThreadReply(channelId, messageTs, threadText);
 
-      this.store.updateTrackedPR(channelId, parsed.url, {
-        threadReplyTs: threadTs,
-        lastKnownState: state,
-        activeEmojis: emojis,
-      });
+        this.store.updateTrackedPR(channelId, parsed.url, {
+          threadReplyTs: threadTs,
+          lastKnownState: state,
+          activeEmojis: emojis,
+        });
+      } catch (err) {
+        this.store.removeTrackedPR(channelId, parsed.url);
+        logger.error({ err }, `Failed to hydrate PR ${parsed.url}`);
+      }
     }
   }
 

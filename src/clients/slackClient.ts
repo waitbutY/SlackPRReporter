@@ -4,7 +4,9 @@ export class SlackClient {
   private web: WebClient;
 
   constructor(token: string) {
-    this.web = new WebClient(token);
+    this.web = new WebClient(token, {
+      retryConfig: { retries: 3 },
+    });
   }
 
   async addReaction(channelId: string, messageTs: string, emoji: string): Promise<void> {
@@ -43,7 +45,22 @@ export class SlackClient {
   }
 
   async getJoinedChannels(): Promise<string[]> {
-    const result = await this.web.conversations.list({ types: 'public_channel,private_channel' });
-    return ((result.channels ?? []) as { id: string }[]).map(c => c.id);
+    const channels: string[] = [];
+    let cursor: string | undefined;
+
+    do {
+      const res = await this.web.conversations.list({
+        types: 'public_channel,private_channel',
+        exclude_archived: true,
+        limit: 200,
+        cursor,
+      });
+      for (const ch of res.channels ?? []) {
+        if (ch.id) channels.push(ch.id);
+      }
+      cursor = res.response_metadata?.next_cursor ?? undefined;
+    } while (cursor);
+
+    return channels;
   }
 }

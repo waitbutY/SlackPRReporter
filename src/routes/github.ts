@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { GitHubHandler } from '../handlers/githubHandler.js';
+import { logger } from '../logger.js';
 
 export function createGitHubRouter(handler: GitHubHandler): Router {
   const router = Router();
@@ -26,7 +27,7 @@ export function createGitHubRouter(handler: GitHubHandler): Router {
 
     // Process async after responding
     handler.handleWebhook(eventType, payload).catch((err: Error) => {
-      console.error('GitHub webhook processing error', err);
+      logger.error({ err }, 'GitHub webhook processing error');
     });
   });
 

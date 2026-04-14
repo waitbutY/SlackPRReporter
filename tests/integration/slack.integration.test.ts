@@ -41,13 +41,26 @@ describe('Slack Handler Integration', () => {
     });
   });
 
-  it('buildApp returns boltApp, store, and slackClient', () => {
+  it('buildApp returns boltApp, store, slackClient, and slackHandler', () => {
     expect(app.boltApp).toBeDefined();
     expect(app.store).toBeDefined();
     expect(app.slackClient).toBeDefined();
+    expect(app.slackHandler).toBeDefined();
   });
 
   it('store starts with no tracked PRs for channel C001', () => {
     expect(app.store.getTrackedPR('C001', 'https://github.com/org/repo/pull/1')).toBeUndefined();
+  });
+
+  it('handleMessage: tracks a PR and posts initial thread reply', async () => {
+    await app.slackHandler.handleMessage(
+      'C001',
+      '123.456',
+      'https://github.com/org/repo/pull/7',
+      'U001',
+    );
+
+    expect(app.store.getTrackedPR('C001', 'https://github.com/org/repo/pull/7')).toBeDefined();
+    expect(mockPostThreadReply).toHaveBeenCalled();
   });
 });

@@ -1,4 +1,5 @@
 import { buildApp } from './app.js';
+import { logger } from './logger.js';
 
 const privateKeyRaw = process.env.GITHUB_APP_PRIVATE_KEY ?? '';
 const privateKey = privateKeyRaw.startsWith('-----')
@@ -17,7 +18,7 @@ const config = {
 
 for (const [key, value] of Object.entries(config)) {
   if (value === undefined || value === null || value === '' || (typeof value === 'number' && isNaN(value))) {
-    console.error(`Missing required environment variable for: ${key}`);
+    logger.error(`Missing required environment variable for: ${key}`);
     process.exit(1);
   }
 }
@@ -39,6 +40,6 @@ const { start, slackClient } = buildApp(config);
       )
     );
   } catch (err) {
-    console.error('Failed to send restart notifications', err);
+    logger.error({ err }, 'Failed to send restart notifications');
   }
 })();

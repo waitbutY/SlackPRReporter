@@ -7,6 +7,7 @@ import { SlackClient } from './clients/slackClient.js';
 import { GitHubHandler } from './handlers/githubHandler.js';
 import { SlackHandler } from './handlers/slackHandler.js';
 import { createGitHubRouter } from './routes/github.js';
+import { logger } from './logger.js';
 
 export interface AppConfig {
   slackBotToken: string;
@@ -24,6 +25,7 @@ export interface BuiltApp {
   boltApp: App;
   store: StateStore;
   slackClient: SlackClient;
+  slackHandler: SlackHandler;
   start: () => Promise<void>;
 }
 
@@ -78,9 +80,10 @@ export function buildApp(config: AppConfig): BuiltApp {
     boltApp,
     store,
     slackClient,
+    slackHandler,
     start: async () => {
       await boltApp.start(config.port);
-      console.log(`Slack PR Reporter listening on port ${config.port}`);
+      logger.info(`Slack PR Reporter listening on port ${config.port}`);
     },
   };
 }

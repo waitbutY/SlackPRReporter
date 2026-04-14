@@ -4,6 +4,7 @@ import { PRStatusService } from '../services/prStatusService.js';
 import { SlackClient } from '../clients/slackClient.js';
 import { GitHubClient } from '../clients/githubClient.js';
 import { PRState } from '../types/index.js';
+import { logger } from '../logger.js';
 
 export class GitHubHandler {
   constructor(
@@ -68,9 +69,16 @@ export class GitHubHandler {
         }
         break;
       }
-      case 'status':
-        // status events don't carry a PR number directly; no-op
+      case 'status': {
+        // NOTE: Commit status events do not carry a PR number. Resolving the PR from
+        // a commit SHA requires an extra API call (GET /repos/{owner}/{repo}/commits/{sha}/pulls)
+        // which is not implemented. Repositories using commit statuses (legacy CI integrations,
+        // many third-party CI tools) will not have CI state reflected in thread replies.
+        // PRs using Check Runs (GitHub Actions, most modern CI) are fully supported via
+        // check_run / check_suite events.
+        logger.debug({ event: 'status' }, 'status events not implemented — no PR number in payload');
         break;
+      }
       default:
         break;
     }
@@ -91,7 +99,7 @@ export class GitHubHandler {
       try {
         fetchResult = await this.ghClient.fetchPRState(owner, repo, prNumber, blocklist);
       } catch (err) {
-        console.error(`Failed to fetch PR state for ${repoFullName}#${prNumber}:`, err);
+        logger.error({ err }, `Failed to fetch PR state for ${repoFullName}#${prNumber}`);
         continue;
       }
       const { state: newState, baseBranch } = fetchResult;
