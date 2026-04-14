@@ -75,6 +75,13 @@ describe('PRStatusService.computeEmojis', () => {
     expect(emojis).not.toContain(DEFAULT_EMOJI_CONFIG.hasOpenComments);
   });
 
+  it('returns hasOpenComments emoji for a merged PR that still has open threads', () => {
+    const state = makeState({ merged: true, reviewComments: [{ user: 'alice', open: 1, resolved: 0 }] });
+    const emojis = service.computeEmojis(state, 1, DEFAULT_EMOJI_CONFIG);
+    expect(emojis).toContain(DEFAULT_EMOJI_CONFIG.merged);
+    expect(emojis).toContain(DEFAULT_EMOJI_CONFIG.hasOpenComments);
+  });
+
   it('uses channel-specific emoji config', () => {
     const config: EmojiConfig = { ...DEFAULT_EMOJI_CONFIG, merged: 'tada' };
     const emojis = service.computeEmojis(makeState({ merged: true }), 1, config);
