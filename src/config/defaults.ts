@@ -1,4 +1,4 @@
-import { EmojiConfig } from '../types/index.js';
+import { EmojiConfig, EmojiKey } from '../types/index.js';
 
 export const DEFAULT_EMOJI_CONFIG: EmojiConfig = {
   merged: 'white_check_mark',
@@ -11,14 +11,14 @@ export const DEFAULT_EMOJI_CONFIG: EmojiConfig = {
   hasOpenComments: 'speech_balloon',
 };
 
-export const HARDCODED_BOT_BLOCKLIST: ReadonlySet<string> = new Set([
+export const HARDCODED_BOT_BLOCKLIST: ReadonlySet<string> = Object.freeze(new Set([
   'dependabot[bot]',
   'github-actions[bot]',
   'copilot[bot]',
   'coderabbitai[bot]',
   'deepsource-autofix[bot]',
-]);
+]));
 
-export const VALID_EMOJI_KEYS: ReadonlySet<string> = new Set(
-  Object.keys(DEFAULT_EMOJI_CONFIG)
-);
+export const VALID_EMOJI_KEYS: ReadonlySet<EmojiKey> = Object.freeze(new Set(
+  Object.keys(DEFAULT_EMOJI_CONFIG) as EmojiKey[]
+));
