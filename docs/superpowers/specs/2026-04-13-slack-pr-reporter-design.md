@@ -50,7 +50,6 @@ interface PRState {
   merged: boolean
   closed: boolean
   approvalCount: number
-  requiredApprovals: number
   reviewComments: { user: string; open: number; resolved: number }[]  // bot-filtered
   ciStatus: 'pending' | 'passing' | 'failing' | 'none'
 }
@@ -144,7 +143,7 @@ All commands are scoped to the channel they are run in.
 
 ### Subscribed Webhook Events
 
-`pull_request`, `pull_request_review`, `pull_request_review_comment`, `check_run`, `check_suite`, `status`
+`pull_request`, `pull_request_review`, `pull_request_review_comment`, `pull_request_review_thread`, `check_run`, `check_suite`, `status`
 
 ### Webhook Verification
 
@@ -159,7 +158,8 @@ Every incoming webhook is verified against the GitHub App webhook secret using H
 | `pull_request.reopened` | Clear closed/merged state, update |
 | `pull_request_review.submitted` | Recount approvals, update |
 | `pull_request_review.dismissed` | Recount approvals, update |
-| `pull_request_review_comment.*` | Recount open/resolved comments per user, update |
+| `pull_request_review_comment.*` | Recount comments per user, update |
+| `pull_request_review_thread.resolved` / `.unresolved` | Update open/resolved counts per user, update |
 | `check_run.completed` / `check_suite.completed` | Update CI status, update |
 | `status` | Update CI status, update |
 
@@ -169,7 +169,7 @@ Before recording any review or comment event, the handler checks if the actor's 
 
 ### Branch Protection
 
-On first encounter of a PR, `GitHubClient` fetches branch protection rules for the target branch to determine `requiredApprovals`. This is cached in `TrackedPR`. It is re-fetched only if the webhook indicates the base branch has changed.
+On first encounter of a PR, `GitHubClient` fetches branch protection rules for the target branch to determine `requiredApprovals`. This is cached in `TrackedPR`. It is re-fetched only if the webhook indicates the base branch has changed. If branch protection rules are unreadable (insufficient permissions, no rules set), the bot falls back to the per-channel `/prbot config required-approvals` value, defaulting to 1.
 
 ### Webhook → Channel Routing
 
