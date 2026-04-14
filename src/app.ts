@@ -16,6 +16,8 @@ export interface AppConfig {
   githubInstallationId: number;
   githubWebhookSecret: string;
   port: number;
+  /** Set to false in tests to skip Slack token verification API call. Default: true */
+  tokenVerificationEnabled?: boolean;
 }
 
 export interface BuiltApp {
@@ -50,7 +52,11 @@ export function buildApp(config: AppConfig): BuiltApp {
   receiver.app.use('/github', express.json(), createGitHubRouter(ghHandler));
   receiver.app.get('/healthz', (_req, res) => res.sendStatus(200));
 
-  const boltApp = new App({ token: config.slackBotToken, receiver });
+  const boltApp = new App({
+    token: config.slackBotToken,
+    receiver,
+    tokenVerificationEnabled: config.tokenVerificationEnabled ?? true,
+  });
 
   boltApp.event('message', async ({ event }) => {
     if (event.subtype) return;

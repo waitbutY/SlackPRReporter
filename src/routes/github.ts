@@ -16,8 +16,16 @@ export function createGitHubRouter(handler: GitHubHandler): Router {
     const eventType = req.headers['x-github-event'] as string ?? '';
     res.sendStatus(200);
 
+    // Parse from rawBody since express.raw may have set req.body to a Buffer
+    let payload: unknown;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch {
+      payload = req.body;
+    }
+
     // Process async after responding
-    handler.handleWebhook(eventType, req.body).catch((err: Error) => {
+    handler.handleWebhook(eventType, payload).catch((err: Error) => {
       console.error('GitHub webhook processing error', err);
     });
   });
